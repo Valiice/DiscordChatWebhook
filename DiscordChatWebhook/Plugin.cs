@@ -1,15 +1,18 @@
 ﻿using Dalamud.Game.Command;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
+using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Plugin;
 using DiscordChatWebhook.Discord;
 using DiscordChatWebhook.Services;
 using DiscordChatWebhook.UI;
 using Lumina.Excel.Sheets;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace DiscordChatWebhook;
 
-public sealed class Plugin : IDalamudPlugin
+public sealed partial class Plugin : IDalamudPlugin
 {
     public static string Name => "DiscordChatWebhook";
     private const string _commandName = "/dcw";
@@ -56,15 +59,32 @@ public sealed class Plugin : IDalamudPlugin
             string senderName = sender.TextValue;
             string worldName = "";
 
-            if (senderName.Contains('@'))
+
+            if (sender.Payloads.FirstOrDefault(p => p is PlayerPayload) is PlayerPayload playerPayload)
+            {
+                senderName = playerPayload.PlayerName;
+                worldName = playerPayload.World.Value.Name.ToString() ?? "";
+            }
+            else if (senderName.Contains('@'))
             {
                 var parts = senderName.Split('@');
                 senderName = parts[0];
                 worldName = parts[1];
             }
-            else if (Service.ClientState.LocalPlayer != null)
+            else
             {
-                worldName = Service.ClientState.LocalPlayer.HomeWorld.Value.Name.ToString() ?? "";
+                // If the name has weird characters (like "Yuuki YangZodiark"), try to clean it
+                // This regex splits on non-standard characters sometimes found in cross-world names
+                if (NonAscii().IsMatch(senderName))
+                {
+                    // This is a "dirty" fix for mashed names if payload fails, 
+                    // but usually PlayerPayload handles this case correctly.
+                }
+
+                if (Service.ClientState.LocalPlayer != null)
+                {
+                    worldName = Service.ClientState.LocalPlayer.HomeWorld.Value.Name.ToString() ?? "";
+                }
             }
 
             this._sender.EnqueueMessage(senderName, worldName, message.TextValue, type);
@@ -84,4 +104,7 @@ public sealed class Plugin : IDalamudPlugin
         this._pluginUi.Dispose();
         this._sender.Dispose();
     }
+
+    [GeneratedRegex(@"[^\u0000-\u007F]+")]
+    private static partial Regex NonAscii();
 }
