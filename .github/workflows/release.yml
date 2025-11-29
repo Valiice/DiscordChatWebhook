@@ -68,7 +68,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: DiscordChatWebhook/bin/x64/Release/DiscordChatWebhook/latest.zip
+          asset_path: DiscordChatWebhook/bin/Release/DiscordChatWebhook/latest.zip
           asset_name: DiscordChatWebhook.zip
           asset_content_type: application/zip
         env:
