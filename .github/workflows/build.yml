@@ -36,4 +36,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: DiscordChatWebhook-Build
-          path: DiscordChatWebhook/bin/Release/net9.0-windows/*
+          path: DiscordChatWebhook/bin/x64/Release/net9.0-windows/*

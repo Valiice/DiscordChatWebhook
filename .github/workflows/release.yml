@@ -24,10 +24,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up .NET 9
+      - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 9.0.x 
+          dotnet-version: 9.0.x
           
       - name: Download Dalamud Latest
         run: |
@@ -53,15 +53,6 @@ jobs:
       - name: Build Project
         run: dotnet build --configuration Release DiscordChatWebhook/DiscordChatWebhook.csproj -p:AssemblyVersion=${{ env.VERSION }}
 
-      # Since we don't use DalamudPackager, we zip the build output manually
-      - name: Create Zip Archive
-        run: |
-          # Navigate to the build output folder
-          cd DiscordChatWebhook/bin/Release/net9.0-windows
-          
-          # Zip everything in that folder (DLL, JSON, PDB)
-          zip -r DiscordChatWebhook.zip .
-
       - name: Create Release
         uses: actions/create-release@v1
         id: create_release
@@ -77,7 +68,7 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: DiscordChatWebhook/bin/Release/net9.0-windows/DiscordChatWebhook.zip
+          asset_path: DiscordChatWebhook/bin/x64/Release/DiscordChatWebhook/latest.zip
           asset_name: DiscordChatWebhook.zip
           asset_content_type: application/zip
         env:
