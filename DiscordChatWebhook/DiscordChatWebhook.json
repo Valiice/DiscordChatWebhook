@@ -1,0 +1,12 @@
+{
+  "Author": "Vali",
+  "Name": "Discord Chat Webhook",
+  "InternalName": "DiscordChatWebhook",
+  "AssemblyVersion": "1.0.0.0",
+  "Description": "Relays chat to Discord via Webhook.",
+  "Punchline": "Simple, lightweight relay of game chat to Discord via Webhook.",
+  "ApplicableVersion": "any",
+  "RepoUrl": "",
+  "Tags": [ "discord", "webhook", "chat" ],
+  "DalamudApiLevel": 13
+}
