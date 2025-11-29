@@ -35,7 +35,7 @@ jobs:
           unzip ${{ env.DALAMUD_HOME }}.zip -d ${{ env.DALAMUD_HOME }}
 
       - name: Restore Project
-        run: dotnet restore DiscordChatWebhook/DiscordChatWebhook.csproj
+        run: dotnet restore DiscordChatWebhook/DiscordChatWebhook.sln
 
       - name: Determine Version
         id: get_version
