@@ -1,6 +1,7 @@
 ﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Game.Text;
 using DiscordChatWebhook.Services;
+using System;
 using System.Numerics;
 
 namespace DiscordChatWebhook.UI;
@@ -42,9 +43,9 @@ internal class PluginUI : IDisposable
         if (!Visible) return;
 
         ImGui.SetNextWindowSize(new Vector2(400, 350), ImGuiCond.FirstUseEver);
+
         if (ImGui.Begin("Discord Chat Webhook", ref this.visible))
         {
-            // Master Switch
             bool enabled = this.config.Enabled;
             if (ImGui.Checkbox("Enable Plugin", ref enabled))
             {
@@ -84,8 +85,8 @@ internal class PluginUI : IDisposable
                     this.config.Save();
                 }
             }
-            ImGui.End();
         }
+        ImGui.End();
     }
 
     public void Dispose()

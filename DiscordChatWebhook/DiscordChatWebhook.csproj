@@ -1,15 +1,13 @@
-﻿<Project Sdk="Dalamud.NET.Sdk/13.1.0">
+﻿<Project Sdk="Dalamud.NET.Sdk/14.0.1">
 	<PropertyGroup>
-		<Authors>User</Authors>
-		<Version>1.0.0.0</Version>
+		<Authors>Vali</Authors>
 		<Description>Relays chat to Discord via Webhook.</Description>
 		<AssemblyName>DiscordChatWebhook</AssemblyName>
-
-		<TargetFramework>net9.0-windows</TargetFramework>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-
+		<PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+		<IsPackable>false</IsPackable>
+		<TargetFramework>net10.0-windows</TargetFramework>
 		<Platforms>x64</Platforms>
+		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
 	<ItemGroup>
 	  <Content Include="DiscordChatWebhook.json">
