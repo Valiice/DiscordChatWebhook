@@ -8,10 +8,12 @@ This is a Dalamud plugin for *FINAL FANTASY XIV* that relays selected in-game ch
 The plugin provides the following core features:
 
 * **Chat Forwarding:** Relays in-game chat to a configurable Discord Webhook URL.
-* **Selectable Channels:** Allows users to select which chat channels to forward, including: Say, Shout, Yell, Party, Free Company, Alliance, Incoming Tells, and Echo.
+* **Selectable Channels:** Allows users to select which chat channels to forward, including: Say, Shout, Yell, Echo, Party, Cross-World Party, Alliance, Free Company, Incoming/Outgoing Tells, Novice Network, Linkshells 1-8, and Cross-World Linkshells 1-8.
 * **Duty Finder Notifications:** Includes an option to notify the Discord channel when a Duty Finder pop occurs.
 * **Rich Discord Messaging:** Messages are sent as Discord Embeds, featuring color-coding based on the chat type (e.g., Party, Say, Tell).
 * **Character Avatar Support:** Attempts to automatically fetch the sender's character avatar from the Lodestone for use as the webhook icon, using a default fallback image if necessary.
+* **Webhook Validation:** Validates the Discord Webhook URL format before use and displays a warning for invalid URLs.
+* **Test Button:** Includes a one-click test button to verify webhook connectivity directly from the configuration window.
 
 ## 💻 Installation & Usage
 
@@ -44,7 +46,7 @@ The plugin provides the following core features:
 This project uses the standard Dalamud development environment.
 
 ### Requirements
-* [.NET SDK 9.0.x](https://dotnet.microsoft.com/download)
+* [.NET SDK 10.0.x](https://dotnet.microsoft.com/download)
 * A compatible version of the Dalamud dependencies (automatically downloaded by the build process).
 
 ### Build Steps
