@@ -7,42 +7,7 @@ on:
     branches: [ "master", "main" ]
 
 jobs:
-  Build:
-    runs-on: ubuntu-latest
-    env:
-      DALAMUD_HOME: /tmp/dalamud
-      DALAMUD_ARCHIVE_URL: ${{ vars.DALAMUD_ARCHIVE_URL || 'https://goatcorp.github.io/dalamud-distrib/latest.zip' }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v6
-
-      - name: Set up .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: 10.0.x
-
-      - name: Download Dalamud Latest
-        run: |
-          wget ${{ env.DALAMUD_ARCHIVE_URL }} -O ${{ env.DALAMUD_HOME }}.zip
-          unzip ${{ env.DALAMUD_HOME }}.zip -d ${{ env.DALAMUD_HOME }}
-
-      - name: Restore Project
-        run: dotnet restore DiscordChatWebhook/DiscordChatWebhook.csproj
-
-      - name: Build Project
-        run: |
-          if ! dotnet build --configuration Release DiscordChatWebhook/DiscordChatWebhook.csproj; then
-            echo "::notice::Stable Dalamud build failed, retrying with staging..."
-            rm -rf $DALAMUD_HOME
-            wget https://goatcorp.github.io/dalamud-distrib/stg/latest.zip -O $DALAMUD_HOME.zip
-            unzip $DALAMUD_HOME.zip -d $DALAMUD_HOME
-            dotnet build --configuration Release DiscordChatWebhook/DiscordChatWebhook.csproj
-          fi
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: DiscordChatWebhook
-          path: |
-             DiscordChatWebhook/DiscordChatWebhook/bin/Release/*
-             !DiscordChatWebhook/DiscordChatWebhook/bin/Release/DiscordChatWebhook/*
+  build:
+    uses: ./.github/workflows/setup-and-build.yml
+    with:
+      configuration: Release

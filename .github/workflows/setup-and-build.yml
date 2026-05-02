@@ -1,0 +1,82 @@
+name: Setup and Build
+
+on:
+  workflow_call:
+    inputs:
+      configuration:
+        type: string
+        default: "Release"
+      version:
+        type: string
+        default: ""
+    secrets:
+      token:
+        required: false
+
+jobs:
+  setup-and-build:
+    runs-on: ubuntu-latest
+    env:
+      DALAMUD_HOME: /tmp/dalamud
+      DALAMUD_ARCHIVE_URL: ${{ vars.DALAMUD_ARCHIVE_URL || 'https://goatcorp.github.io/dalamud-distrib/latest.zip' }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.token || github.token }}
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+
+      - name: Cache Dalamud
+        uses: actions/cache@v5
+        id: cache-dalamud
+        with:
+          path: ${{ env.DALAMUD_HOME }}
+          key: dalamud-${{ env.DALAMUD_ARCHIVE_URL }}
+
+      - name: Download Dalamud Latest
+        if: steps.cache-dalamud.outputs.cache-hit != 'true'
+        run: |
+          wget ${{ env.DALAMUD_ARCHIVE_URL }} -O ${{ env.DALAMUD_HOME }}.zip
+          unzip ${{ env.DALAMUD_HOME }}.zip -d ${{ env.DALAMUD_HOME }}
+
+      - name: Build Project
+        run: |
+          BUILD_ARGS="--configuration ${{ inputs.configuration }} DiscordChatWebhook/DiscordChatWebhook.csproj"
+          if [ -n "${{ inputs.version }}" ]; then
+            BUILD_ARGS="$BUILD_ARGS -p:AssemblyVersion=${{ inputs.version }}"
+          fi
+          if ! dotnet build $BUILD_ARGS; then
+            echo "::notice::Stable Dalamud build failed, retrying with staging..."
+            rm -rf $DALAMUD_HOME
+            wget https://goatcorp.github.io/dalamud-distrib/stg/latest.zip -O $DALAMUD_HOME.zip
+            unzip $DALAMUD_HOME.zip -d $DALAMUD_HOME
+            dotnet build $BUILD_ARGS
+          fi
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: DiscordChatWebhook
+          retention-days: 14
+          path: |
+            DiscordChatWebhook/bin/${{ inputs.configuration }}/*
+            !DiscordChatWebhook/bin/${{ inputs.configuration }}/DiscordChatWebhook/
+
+      - name: Rename Release Asset
+        if: inputs.version != ''
+        run: mv DiscordChatWebhook/bin/${{ inputs.configuration }}/DiscordChatWebhook/latest.zip DiscordChatWebhook/bin/${{ inputs.configuration }}/DiscordChatWebhook/DiscordChatWebhook.zip
+
+      - name: Upload Release Asset
+        if: inputs.version != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: DiscordChatWebhook-release
+          retention-days: 1
+          path: DiscordChatWebhook/bin/${{ inputs.configuration }}/DiscordChatWebhook/DiscordChatWebhook.zip

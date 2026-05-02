@@ -15,61 +15,97 @@ permissions:
   contents: write
 
 jobs:
-  Build:
+  prepare:
     runs-on: ubuntu-latest
-    env:
-      DALAMUD_HOME: /tmp/dalamud
-      DALAMUD_ARCHIVE_URL: ${{ vars.DALAMUD_ARCHIVE_URL || 'https://goatcorp.github.io/dalamud-distrib/latest.zip' }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      assembly_version: ${{ steps.version.outputs.assembly_version }}
+      tag_name: ${{ steps.version.outputs.tag_name }}
+    steps:
+      - name: Determine Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            TAG="v${{ github.event.inputs.version }}"
+          else
+            VERSION="${{ github.ref_name }}"
+            VERSION="${VERSION#v}"
+            TAG="${{ github.ref_name }}"
+          fi
+          ASSEMBLY_VERSION="$VERSION"
+          if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            ASSEMBLY_VERSION="${VERSION}.0"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "assembly_version=$ASSEMBLY_VERSION" >> $GITHUB_OUTPUT
+          echo "tag_name=$TAG" >> $GITHUB_OUTPUT
+
+  build:
+    needs: prepare
+    uses: ./.github/workflows/setup-and-build.yml
+    with:
+      configuration: Release
+      version: ${{ needs.prepare.outputs.assembly_version }}
+    secrets:
+      token: ${{ secrets.PAT_TOKEN }}
+
+  release:
+    needs: [ prepare, build ]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
-
-      - name: Set up .NET
-        uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: 9.0.x
-          
-      - name: Download Dalamud Latest
-        run: |
-          wget ${{ env.DALAMUD_ARCHIVE_URL }} -O ${{ env.DALAMUD_HOME }}.zip
-          unzip ${{ env.DALAMUD_HOME }}.zip -d ${{ env.DALAMUD_HOME }}
+          fetch-depth: 0
 
-      - name: Restore Project
-        run: dotnet restore DiscordChatWebhook.slnx
+      - name: Download Release Asset
+        uses: actions/download-artifact@v8
+        with:
+          name: DiscordChatWebhook-release
+          path: release
 
-      - name: Determine Version
-        id: get_version
+      - name: Generate Changelog
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            # Manual run: use the input version
-            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
-            echo "TAG_NAME=v${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          TAG="${{ needs.prepare.outputs.tag_name }}"
+          REF=$(git rev-parse --verify "$TAG" 2>/dev/null || echo "HEAD")
+          PREV_TAG=$(git describe --tags --abbrev=0 "$REF^" 2>/dev/null || true)
+          if [ -z "$PREV_TAG" ]; then
+            RANGE="$REF"
           else
-            # Tag push: strip the 'v' prefix
-            echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
-            echo "TAG_NAME=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+            RANGE="$PREV_TAG..$REF"
+          fi
+          git log --no-merges --pretty=format:"- %s" "$RANGE" \
+            | grep -viE "^- (Bump |Merge |Release v)" \
+            > changelog.txt || true
+          if [ ! -s changelog.txt ]; then
+            echo "- Release $TAG" > changelog.txt
           fi
 
-      - name: Build Project
-        run: dotnet build --configuration Release DiscordChatWebhook/DiscordChatWebhook.csproj -p:AssemblyVersion=${{ env.VERSION }}
-
       - name: Create Release
-        uses: actions/create-release@v1
-        id: create_release
+        uses: softprops/action-gh-release@v3
         with:
+          name: ${{ needs.prepare.outputs.tag_name }}
+          tag_name: ${{ needs.prepare.outputs.tag_name }}
           draft: false
           prerelease: false
-          release_name: ${{ env.TAG_NAME }}
-          tag_name: ${{ env.TAG_NAME }}
+          body_path: changelog.txt
+          files: release/DiscordChatWebhook.zip
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: DiscordChatWebhook/bin/Release/DiscordChatWebhook/latest.zip
-          asset_name: DiscordChatWebhook.zip
-          asset_content_type: application/zip
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+      - name: Dispatch Plugin Repo Update
+        run: |
+          CHANGELOG=$(cat changelog.txt)
+          jq -n \
+            --arg plugin "DiscordChatWebhook" \
+            --arg version "${{ needs.prepare.outputs.assembly_version }}" \
+            --arg tag "${{ needs.prepare.outputs.tag_name }}" \
+            --arg repo "${{ github.repository }}" \
+            --arg changelog "$CHANGELOG" \
+            '{"event_type":"plugin-release","client_payload":{plugin:$plugin,version:$version,tag:$tag,repo:$repo,changelog:$changelog}}' \
+          | curl -X POST \
+            -H "Authorization: token ${{ secrets.PAT_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/Valiice/DalamudPluginRepo/dispatches \
+            -d @-
